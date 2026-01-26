@@ -5,7 +5,6 @@ using UnityEditor;
 
 public class AssetValidatorWindow : EditorWindow
 {
-    private bool autoFix = false;
     private bool checkTextures = true;
     private bool checkMeshes = true;
 
@@ -41,7 +40,6 @@ public class AssetValidatorWindow : EditorWindow
         EditorGUILayout.BeginVertical("box");
         GUILayout.Label("Scan Options", EditorStyles.boldLabel);
 
-        autoFix = GUILayout.Toggle(autoFix, "Auto-fix issues");
         checkTextures = GUILayout.Toggle(checkTextures, "Validate Textures");
         //checkMeshes = GUILayout.Toggle(checkMeshes, "Validate Meshes");
         textureSizeIndex = EditorGUILayout.Popup("Max Texture Size", textureSizeIndex, textureSizeLabels);
@@ -53,7 +51,7 @@ public class AssetValidatorWindow : EditorWindow
         // Scan textures
         if (GUILayout.Button("Scan Project"))
         {
-            results = AssetScanner.Scan(autoFix, checkTextures, textureSize);
+            results = AssetScanner.Scan(checkTextures, textureSize);
         }
 
         scrollPos = GUILayout.BeginScrollView(scrollPos);
@@ -80,6 +78,7 @@ public class AssetValidatorWindow : EditorWindow
             if (GUILayout.Button(preview, GUILayout.Width(50), GUILayout.Height(50)))
             {
                 Selection.activeObject = asset;
+                EditorGUIUtility.PingObject(asset);
             }
 
             // Texture Info
@@ -90,15 +89,68 @@ public class AssetValidatorWindow : EditorWindow
             GUILayout.Label(result.message, wordWrapLabel, GUILayout.MaxWidth(position.width - 140));
             EditorGUILayout.EndVertical();
 
-            if (GUILayout.Button("Ping", GUILayout.Width(40)))
-            {
-                EditorGUIUtility.PingObject(asset);
-            }
-
             EditorGUILayout.EndHorizontal();
         }
 
         GUILayout.EndScrollView();
+        GUILayout.Space(8);
+        EditorGUILayout.BeginHorizontal();
+
+        //  Quick selection
+        if (GUILayout.Button("Select All", GUILayout.Width(80)))
+        {
+            foreach (var r in results) if (r != null) r.selected = true;
+        }
+        if (GUILayout.Button("Select None", GUILayout.Width(80)))
+        {
+            foreach (var r in results) if (r != null) r.selected = false;
+        }
+
+        GUILayout.FlexibleSpace();
+
+        // Fix Selected
+        using (new EditorGUI.DisabledScope(results == null || results.Count == 0))
+        {
+            if (GUILayout.Button("Fix Selected", GUILayout.Height(26), GUILayout.Width(110)))
+            {
+                FixSelected();
+            }
+        }
+
+        EditorGUILayout.EndHorizontal();
 
     }
+
+    private void FixSelected()
+    {
+        // Collect first
+        var toFix = new List<ValidationResults>();
+        foreach (var r in results)
+        {
+            if (r == null) continue;
+            if (!r.selected) continue;
+            if (r.autoFixAction == null) continue;
+            toFix.Add(r);
+        }
+
+        if (toFix.Count == 0)
+            return;
+
+        // Faster batch import
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            foreach (var r in toFix)
+                r.autoFixAction.Invoke();
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+            AssetDatabase.Refresh();
+        }
+
+        // Re-scan so warnings disappear
+        results = AssetScanner.Scan(checkTextures, textureSize);
+    }
+
 }

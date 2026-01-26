@@ -5,7 +5,7 @@ using UnityEditor;
 
 public static class AssetScanner
 {
-    public static List<ValidationResults> Scan(bool autoFix, bool checkTextures, int textureSize)
+    public static List<ValidationResults> Scan(bool checkTextures, int textureSize)
     {
         Debug.Log("Scanning project assets...");
 
