@@ -1,0 +1,11 @@
+{
+  "name": "com.nankang.asset-validation",
+  "displayName": "Unity Asset Validation Tool",
+  "version": "0.1.1",
+  "unity": "2019.4",
+  "description": "An editor tool for validating Unity assets.",
+  "author": {
+    "name": "Nan Kang",
+    "url": "https://github.com/nankang2"
+  }
+}
